@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#1e293b" />
+  <title>Gungbe App</title>
+  <link rel="manifest" href="manifest.json" />
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --accent: #38bdf8;
+      --accent-hover: #0284c7;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --success: #22c55e;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: var(--bg); color: var(--text); padding-bottom: 70px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+    header { width: 100%; max-width: 480px; padding: 20px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; }
+    h1 { font-size: 1.25rem; font-weight: 700; color: var(--accent); }
+    main { width: 100%; max-width: 480px; padding: 16px; display: flex; flex-direction: column; gap: 20px; }
+    
+    .card { background: var(--card-bg); border-radius: 16px; padding: 20px; border: 1px solid #334155; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.2); }
+    .card-title { font-size: 0.9rem; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; letter-spacing: 0.05em; }
+    .word-main { font-size: 1.8rem; font-weight: 700; margin-bottom: 4px; color: var(--text); }
+    .word-phonetic { font-size: 0.95rem; color: var(--accent); margin-bottom: 8px; font-style: italic; }
+    .word-translation { font-size: 1.1rem; color: #cbd5e1; }
+
+    .action-row { display: flex; gap: 10px; margin-top: 16px; }
+    button { flex: 1; padding: 12px; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 0.95rem; }
+    .btn-primary { background: var(--accent); color: #0f172a; }
+    .btn-primary:active { background: var(--accent-hover); }
+    .btn-outline { background: transparent; border: 1px solid #475569; color: var(--text); }
+    .btn-outline:active { background: #334155; }
+
+    .nav-tabs { position: fixed; bottom: 0; width: 100%; max-width: 480px; background: #0f172a; border-top: 1px solid #334155; display: flex; justify-content: space-around; padding: 10px 0; z-index: 10; }
+    .tab-btn { background: none; border: none; color: var(--text-muted); font-size: 0.85rem; padding: 6px; }
+    .tab-btn.active { color: var(--accent); font-weight: 700; }
+    .hidden { display: none; }
+
+    .quiz-option { width: 100%; padding: 14px; text-align: left; background: #334155; color: var(--text); border-radius: 8px; margin-bottom: 8px; border: 1px solid transparent; }
+    .quiz-option:active { border-color: var(--accent); }
+    .badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; background: #334155; color: var(--accent); margin-bottom: 12px; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Gungbe Dó</h1>
+    <button id="btnNotify" class="btn-outline" style="flex: initial; padding: 6px 12px; font-size: 0.8rem;">🔔 Rappel</button>
+  </header>
+
+  <main>
+    <!-- Section Cartes / Vocabulaire -->
+    <section id="view-cards">
+      <div class="card">
+        <span class="badge" id="cardCategory">Salutation</span>
+        <div class="word-main" id="cardGun">Ahouanndó</div>
+        <div class="word-phonetic" id="cardPhonetic">[a-wan-dó]</div>
+        <div class="word-translation" id="cardFr">Bonjour / Bon après-midi</div>
+        
+        <div class="action-row">
+          <button class="btn-primary" id="btnAudio">🔊 Écouter</button>
+          <button class="btn-outline" id="btnNext">Suivant ➔</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section Pratique / Quiz -->
+    <section id="view-quiz" class="hidden">
+      <div class="card">
+        <div class="card-title">Traduis ce mot :</div>
+        <div class="word-main" id="quizQuestion" style="margin-bottom: 16px;">...</div>
+        <div id="quizOptions"></div>
+        <div id="quizFeedback" style="margin-top: 10px; font-weight: bold;"></div>
+      </div>
+    </section>
+
+    <!-- Section Statistiques -->
+    <section id="view-stats" class="hidden">
+      <div class="card">
+        <div class="card-title">Progression</div>
+        <p style="margin-top: 10px;">Mots passés en revue : <strong id="statCount">0</strong></p>
+      </div>
+    </section>
+  </main>
+
+  <nav class="nav-tabs">
+    <button class="tab-btn active" onclick="switchTab('cards')">Mots</button>
+    <button class="tab-btn" onclick="switchTab('quiz')">Quiz</button>
+    <button class="tab-btn" onclick="switchTab('stats')">Progrès</button>
+  </nav>
+
+  <script>
+    const vocabulary = [
+      // Salutations & Politesse
+      { gun: "Ahouanndó", phonetic: "a-wan-dó", fr: "Bonjour / Bon après-midi", cat: "Salutations" },
+      { gun: "Àsúgbá", phonetic: "a-sou-gba", fr: "Bonsoir", cat: "Salutations" },
+      { gun: "Kú dòkùn", phonetic: "kou do-koun", fr: "Merci beaucoup", cat: "Politesse" },
+      { gun: "O dkpè", phonetic: "o kpé", fr: "Merci", cat: "Politesse" },
+      { gun: "Dòkúpɔ́", phonetic: "do-kou-kpɔ", fr: "Au revoir / À bientôt", cat: "Salutations" },
+      { gun: "E gbɔ́n tɛ̀?", phonetic: "é gbon tɛ", fr: "Comment vas-tu ?", cat: "Conversation" },
+      { gun: "N'dó dagbe", phonetic: "n-do dagbé", fr: "Je vais bien", cat: "Conversation" },
+      { gun: "Tɛ́ wɛ nyíkɔ́ towe?", phonetic: "tɛ wé gni-kɔ towé", fr: "Comment t'appelles-tu ?", cat: "Conversation" },
+      { gun: "Nyíkɔ́ ce wɛ...", phonetic: "gni-kɔ ché wé...", fr: "Je m'appelle...", cat: "Conversation" },
+
+      // Famille & Proches
+      { gun: "Nɔ̀", phonetic: "nɔ", fr: "Mère / Maman", cat: "Famille" },
+      { gun: "Tɔ́", phonetic: "tɔ", fr: "Père / Papa", cat: "Famille" },
+      { gun: "Vǐ", phonetic: "vi", fr: "Enfant", cat: "Famille" },
+      { gun: "Fofo", phonetic: "fo-fo", fr: "Grand frère", cat: "Famille" },
+      { gun: "Dada", phonetic: "da-da", fr: "Grande sœur", cat: "Famille" },
+      { gun: "Mɛxó", phonetic: "mɛ-xó", fr: "L'aîné", cat: "Famille" },
+
+      // Nourriture & Repas
+      { gun: "Núdùdù", phonetic: "nou-dou-dou", fr: "Nourriture / Repas", cat: "Cuisine" },
+      { gun: "Sìn", phonetic: "sin", fr: "Eau", cat: "Cuisine" },
+      { gun: "Wɔ̌", phonetic: "wɔ", fr: "Pâte (de maïs)", cat: "Cuisine" },
+      { gun: "Mɔ́lu", phonetic: "mɔ-lou", fr: "Riz", cat: "Cuisine" },
+      { gun: "Làn", phonetic: "lan", fr: "Viande / Poisson", cat: "Cuisine" },
+      { gun: "Hwevǐ", phonetic: "hwe-vi", fr: "Poisson", cat: "Cuisine" },
+      { gun: "Oùn jló na dù nú", phonetic: "oun jló na dou nou", fr: "J'ai faim", cat: "Cuisine" },
+
+      // Quotidien
+      { gun: "Oùn wán yí wé", phonetic: "oun wan yi wé", fr: "Je t'aime", cat: "Sentiments" },
+      { gun: "Wá fí", phonetic: "wa fi", fr: "Viens ici", cat: "Quotidien" },
+      { gun: "Yì", phonetic: "yi", fr: "Va-t'en / Pars", cat: "Quotidien" },
+      { gun: "Daga", phonetic: "da-ga", fr: "C'est bon / D'accord", cat: "Quotidien" },
+      { gun: "É sùgbɔ́", phonetic: "é sou-gbɔ", fr: "C'est beaucoup / C'est assez", cat: "Quotidien" }
+    ];
+
+    let currentIndex = 0;
+    let reviewedCount = 0;
+
+    function updateCard() {
+      const item = vocabulary[currentIndex];
+      document.getElementById('cardCategory').textContent = item.cat;
+      document.getElementById('cardGun').textContent = item.gun;
+      document.getElementById('cardPhonetic').textContent = `[${item.phonetic}]`;
+      document.getElementById('cardFr').textContent = item.fr;
+    }
+
+    document.getElementById('btnNext').addEventListener('click', () => {
+      currentIndex = (currentIndex + 1) % vocabulary.length;
+      reviewedCount++;
+      document.getElementById('statCount').textContent = reviewedCount;
+      updateCard();
+    });
+
+    document.getElementById('btnAudio').addEventListener('click', () => {
+      const item = vocabulary[currentIndex];
+      if ('speechSynthesis' in window) {
+        const utter = new SpeechSynthesisUtterance(item.phonetic);
+        utter.lang = 'fr-FR';
+        utter.rate = 0.85;
+        window.speechSynthesis.speak(utter);
+      }
+    });
+
+    function loadQuiz() {
+      const q = vocabulary[Math.floor(Math.random() * vocabulary.length)];
+      document.getElementById('quizQuestion').textContent = q.gun;
+      document.getElementById('quizFeedback').textContent = "";
+      
+      const options = [q.fr];
+      while(options.length < 3) {
+        const r = vocabulary[Math.floor(Math.random() * vocabulary.length)].fr;
+        if (!options.includes(r)) options.push(r);
+      }
+      options.sort(() => Math.random() - 0.5);
+
+      const optsContainer = document.getElementById('quizOptions');
+      optsContainer.innerHTML = "";
+      options.forEach(opt => {
+        const btn = document.createElement('button');
+        btn.className = 'quiz-option';
+        btn.textContent = opt;
+        btn.onclick = () => {
+          if (opt === q.fr) {
+            document.getElementById('quizFeedback').textContent = "✓ Bravo ! (Daga)";
+            document.getElementById('quizFeedback').style.color = "var(--success)";
+            setTimeout(loadQuiz, 1200);
+          } else {
+            document.getElementById('quizFeedback').textContent = `✗ Non, c'était : ${q.fr}`;
+            document.getElementById('quizFeedback').style.color = "#f43f5e";
+          }
+        };
+        optsContainer.appendChild(btn);
+      });
+    }
+
+    function switchTab(tab) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      event.target.classList.add('active');
+      document.getElementById('view-cards').classList.add('hidden');
+      document.getElementById('view-quiz').classList.add('hidden');
+      document.getElementById('view-stats').classList.add('hidden');
+
+      if (tab === 'cards') document.getElementById('view-cards').classList.remove('hidden');
+      if (tab === 'quiz') { document.getElementById('view-quiz').classList.remove('hidden'); loadQuiz(); }
+      if (tab === 'stats') document.getElementById('view-stats').classList.remove('hidden');
+    }
+
+    document.getElementById('btnNotify').addEventListener('click', async () => {
+      if (!('Notification' in window)) {
+        alert("Ce navigateur ne gère pas les notifications.");
+        return;
+      }
+      const perm = await Notification.requestPermission();
+      if (perm === 'granted') {
+        navigator.serviceWorker.ready.then((reg) => {
+          reg.showNotification("Gungbe Dó 📖", {
+            body: "C'est l'heure de tes 3 minutes de gungbe !",
+            icon: "icon-192.png",
+            tag: "daily-gungbe"
+          });
+        });
+        alert("Rappels autorisés !");
+      }
+    });
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js');
+      });
+    }
+
+    updateCard();
+  </script>
+</body>
+</html>
